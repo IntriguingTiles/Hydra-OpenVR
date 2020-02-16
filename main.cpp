@@ -2,6 +2,8 @@
 #include <sixense_math.hpp>
 #include <openvr.h>
 
+#include <windows.h>
+
 #include <algorithm>
 #include <deque>
 #include <thread>
@@ -10,6 +12,18 @@
 
 #define SIXENSE_MAX_HISTORY 50
 #define M_RAD_45 0.78539816339744830961566084581988
+
+struct actions {
+	vr::VRActionHandle_t bumper = vr::k_ulInvalidActionHandle;
+	vr::VRActionHandle_t start = vr::k_ulInvalidActionHandle;
+	vr::VRActionHandle_t b1 = vr::k_ulInvalidActionHandle;
+	vr::VRActionHandle_t b2 = vr::k_ulInvalidActionHandle;
+	vr::VRActionHandle_t b3 = vr::k_ulInvalidActionHandle;
+	vr::VRActionHandle_t b4 = vr::k_ulInvalidActionHandle;
+	vr::VRActionHandle_t trigger = vr::k_ulInvalidActionHandle;
+	vr::VRActionHandle_t joystick = vr::k_ulInvalidActionHandle;
+	vr::VRActionHandle_t haptic = vr::k_ulInvalidActionHandle;
+};
 
 typedef struct _sixenseControllerDataOld {
     float pos[3];
@@ -42,10 +56,18 @@ typedef sixenseAllControllerData compatAllControllerData;
 typedef sixenseControllerData compatControllerData;
 #endif
 
+actions buttons[4];
+vr::VRActionSetHandle_t actionSet;
 bool g_running = false;
 std::thread g_thread;
 std::mutex g_data_mutex;
 std::deque<compatAllControllerData> g_controller_data;
+
+bool pressed(vr::VRActionHandle_t button) {
+	vr::InputDigitalActionData_t actionData;
+	vr::VRInput()->GetDigitalActionData(button, &actionData, sizeof(actionData), vr::k_ulInvalidInputValueHandle);
+	return actionData.bActive && actionData.bState;
+}
 
 void sixenseThreadFunc()
 {
@@ -63,18 +85,18 @@ void sixenseThreadFunc()
         vr::TrackedDevicePose_t poses[vr::k_unMaxTrackedDeviceCount];
         vr::VRSystem()->GetDeviceToAbsoluteTrackingPose(vr::TrackingUniverseSeated, 0.0f, poses, vr::k_unMaxTrackedDeviceCount);
 
+		vr::VRActiveActionSet_t activeSet = { 0 };
+		activeSet.ulActionSet = actionSet;
+		vr::VRInput()->UpdateActionState(&activeSet, sizeof(activeSet), 1);
+
         compatAllControllerData all_data = {};
         for (int i = 0, j = 0; i < vr::k_unMaxTrackedDeviceCount && j < SIXENSE_MAX_CONTROLLERS; i++)
         {
             if (vr::VRSystem()->GetTrackedDeviceClass(i) != vr::TrackedDeviceClass_Controller)
                 continue;
 
-            compatControllerData& data = all_data.controllers[j++];
+            compatControllerData& data = all_data.controllers[j];
             vr::HmdMatrix34_t& pose = poses[i].mDeviceToAbsoluteTracking;
-
-            vr::VRControllerState_t state;
-            if (!vr::VRSystem()->GetControllerState(i, &state, sizeof(state)))
-                continue;
 
             // Sixense SDK is column-major instead of row-major
             float matData[3][3];
@@ -93,40 +115,39 @@ void sixenseThreadFunc()
                 for (int col = 0; col < 3; col++)
                     data.rot_mat[col][row] = mat[col][row];
 
+			vr::InputAnalogActionData_t joystickData;
+			vr::VRInput()->GetAnalogActionData(buttons[j].joystick, &joystickData, sizeof(joystickData), vr::k_ulInvalidInputValueHandle);
+
+			vr::InputAnalogActionData_t triggerData;
+			vr::VRInput()->GetAnalogActionData(buttons[j].trigger, &triggerData, sizeof(triggerData), vr::k_ulInvalidInputValueHandle);
             // TODO: Buttons
 #ifdef SIXENSE_LEGACY
-            data.joystick_x = (uint8_t)((state.rAxis[0].x + 1.0f) * 127.5f);
-            data.joystick_y = (uint8_t)((state.rAxis[0].y + 1.0f) * 127.5f);
-            data.trigger = (uint8_t)(state.rAxis[1].x * 255.0f);
+            data.joystick_x = (uint8_t)((joystickData.x + 1.0f) * 127.5f);
+            data.joystick_y = (uint8_t)((joystickData.y + 1.0f) * 127.5f);
+            data.trigger = (uint8_t)(triggerData.x * 255.0f);
 #else
-            data.joystick_x = state.rAxis[0].x;
-            data.joystick_y = state.rAxis[0].y;
-            data.trigger = state.rAxis[1].x;
+            data.joystick_x = joystickData.x;
+            data.joystick_y = joystickData.y;
+            data.trigger = triggerData.x;
 #endif
 
-            if (state.ulButtonPressed & vr::ButtonMaskFromId(vr::k_EButton_Grip))
+            if (pressed(buttons[j].bumper))
                 data.buttons |= SIXENSE_BUTTON_BUMPER;
 
-            if (state.ulButtonPressed & vr::ButtonMaskFromId(vr::k_EButton_ApplicationMenu))
+            if (pressed(buttons[j].start))
                 data.buttons |= SIXENSE_BUTTON_START;
 
-            if (state.ulButtonPressed & vr::ButtonMaskFromId(vr::k_EButton_SteamVR_Touchpad))
-            {
-                if (state.rAxis[0].y < 0.0f)
-                {
-                    if (state.rAxis[0].x < 0.0f)
-                        data.buttons |= SIXENSE_BUTTON_1;
-                    else
-                        data.buttons |= SIXENSE_BUTTON_2;
-                }
-                else
-                {
-                    if (state.rAxis[0].x < 0.0f)
-                        data.buttons |= SIXENSE_BUTTON_3;
-                    else
-                        data.buttons |= SIXENSE_BUTTON_4;
-                }
-            }
+			if (pressed(buttons[j].b1))
+				data.buttons |= SIXENSE_BUTTON_1;
+
+			if (pressed(buttons[j].b2))
+				data.buttons |= SIXENSE_BUTTON_2;
+
+			if (pressed(buttons[j].b3))
+				data.buttons |= SIXENSE_BUTTON_3;
+
+			if (pressed(buttons[j].b4))
+				data.buttons |= SIXENSE_BUTTON_4;
 
             data.sequence_number = sequence;
 
@@ -142,7 +163,7 @@ void sixenseThreadFunc()
             data.packet_type = 1;
             data.magnetic_frequency = 0;
             data.enabled = 1;
-            data.controller_index = j;
+            data.controller_index = ++j;
             data.is_docked = vr::VRSystem()->GetBoolTrackedDeviceProperty(i, vr::Prop_DeviceIsCharging_Bool);
             data.which_hand = vr::VRSystem()->GetControllerRoleForTrackedDeviceIndex(i);
 #ifndef SIXENSE_LEGACY
@@ -172,8 +193,42 @@ SIXENSE_EXPORT int sixenseInit(void)
             compatAllControllerData all_data = {};
             g_controller_data.push_back(all_data);
         }
-        g_running = true;
+
+		WCHAR path[_MAX_PATH];
+		HMODULE hm = NULL;
+
+		// we don't really care if this fails
+		GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, (LPCWSTR)&sixenseInit, &hm);
+		GetModuleFileName(hm, path, sizeof(path));
+		WCHAR* p = wcsrchr(path, '\\');
+		if (p) *p = NULL;
+		wcscat_s(path, L"\\portal2_action_manifest.json");
+
+		vr::VRInput()->GetActionHandle("/actions/portal2/in/left_bumper", &buttons[0].bumper);
+		vr::VRInput()->GetActionHandle("/actions/portal2/in/left_start", &buttons[0].start);
+		vr::VRInput()->GetActionHandle("/actions/portal2/in/left_b1", &buttons[0].b1);
+		vr::VRInput()->GetActionHandle("/actions/portal2/in/left_b2", &buttons[0].b2);
+		vr::VRInput()->GetActionHandle("/actions/portal2/in/left_b3", &buttons[0].b3);
+		vr::VRInput()->GetActionHandle("/actions/portal2/in/left_b4", &buttons[0].b4);
+		vr::VRInput()->GetActionHandle("/actions/portal2/in/left_trigger", &buttons[0].trigger);
+		vr::VRInput()->GetActionHandle("/actions/portal2/in/left_joystick", &buttons[0].joystick);
+		vr::VRInput()->GetActionHandle("/actions/portal2/out/left_haptic", &buttons[0].haptic);
+
+		vr::VRInput()->GetActionHandle("/actions/portal2/in/right_bumper", &buttons[1].bumper);
+		vr::VRInput()->GetActionHandle("/actions/portal2/in/right_start", &buttons[1].start);
+		vr::VRInput()->GetActionHandle("/actions/portal2/in/right_b1", &buttons[1].b1);
+		vr::VRInput()->GetActionHandle("/actions/portal2/in/right_b2", &buttons[1].b2);
+		vr::VRInput()->GetActionHandle("/actions/portal2/in/right_b3", &buttons[1].b3);
+		vr::VRInput()->GetActionHandle("/actions/portal2/in/right_b4", &buttons[1].b4);
+		vr::VRInput()->GetActionHandle("/actions/portal2/in/right_trigger", &buttons[1].trigger);
+		vr::VRInput()->GetActionHandle("/actions/portal2/in/right_joystick", &buttons[1].joystick);
+		vr::VRInput()->GetActionHandle("/actions/portal2/out/right_haptic", &buttons[1].haptic);
+
+		vr::VRInput()->GetActionSetHandle("/actions/portal2", &actionSet);
+
+		g_running = true;
         g_thread = std::thread(sixenseThreadFunc);
+		
         return SIXENSE_SUCCESS;
     }
     return SIXENSE_FAILURE;
@@ -204,7 +259,7 @@ SIXENSE_EXPORT int sixenseIsControllerEnabled(int which)
     vr::VRSystem()->GetSortedTrackedDeviceIndicesOfClass(vr::TrackedDeviceClass_Controller, devices, SIXENSE_MAX_CONTROLLERS);
     return vr::VRSystem()->IsTrackedDeviceConnected(devices[which]);
 }
-SIXENSE_EXPORT int sixenseGetNumActiveControllers() { return std::min((int)vr::VRSystem()->GetSortedTrackedDeviceIndicesOfClass(vr::TrackedDeviceClass_Controller, nullptr, 0), SIXENSE_MAX_CONTROLLERS); }
+SIXENSE_EXPORT int sixenseGetNumActiveControllers() { return min((int)vr::VRSystem()->GetSortedTrackedDeviceIndicesOfClass(vr::TrackedDeviceClass_Controller, nullptr, 0), SIXENSE_MAX_CONTROLLERS); }
 
 SIXENSE_EXPORT int sixenseGetHistorySize() { return SIXENSE_MAX_HISTORY; }
 
@@ -261,13 +316,7 @@ SIXENSE_EXPORT int sixenseTriggerVibration(int controller_id, int duration_100ms
     if (controller_id >= 4)
         return SIXENSE_FAILURE;
 
-    /* TODO: OpenVR doesn't allow such long duration vibrations and this function is unsupported anyway.
-    vr::TrackedDeviceIndex_t devices[SIXENSE_MAX_CONTROLLERS];
-    memset(devices, vr::k_unTrackedDeviceIndexInvalid, sizeof(devices));
-    vr::VRSystem()->GetSortedTrackedDeviceIndicesOfClass(vr::TrackedDeviceClass_Controller, devices, SIXENSE_MAX_CONTROLLERS);
-
-    vr::VRSystem()->TriggerHapticPulse(devices[controller_id], 0, duration_100ms * 100000);
-    */
+	vr::VRInput()->TriggerHapticVibrationAction(buttons[controller_id].haptic, 0, duration_100ms * 0.1, 100, 1, vr::k_ulInvalidInputValueHandle);
     return SIXENSE_SUCCESS;
 }
 
