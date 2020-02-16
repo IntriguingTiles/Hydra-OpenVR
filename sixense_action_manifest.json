@@ -1,0 +1,83 @@
+{
+    "default_bindings": [], 
+	"actions": [
+    {
+      "name": "/actions/sixense/in/left_bumper",
+      "type": "boolean"
+    },
+	{
+      "name": "/actions/sixense/in/left_start",
+      "type": "boolean"
+    },
+	{
+      "name": "/actions/sixense/in/left_b1",
+      "type": "boolean"
+    },
+	{
+      "name": "/actions/sixense/in/left_b2",
+      "type": "boolean"
+    },
+	{
+      "name": "/actions/sixense/in/left_b3",
+      "type": "boolean"
+    },
+	{
+      "name": "/actions/sixense/in/left_b4",
+      "type": "boolean"
+    },
+	{
+      "name": "/actions/sixense/in/left_trigger",
+      "type": "single"
+    },
+	{
+      "name": "/actions/sixense/in/left_joystick",
+      "type": "vector2"
+    },
+	{
+      "name": "/actions/sixense/out/left_haptic",
+      "type": "vibration"
+    },
+	    {
+      "name": "/actions/sixense/in/right_bumper",
+      "type": "boolean"
+    },
+	{
+      "name": "/actions/sixense/in/right_start",
+      "type": "boolean"
+    },
+	{
+      "name": "/actions/sixense/in/right_b1",
+      "type": "boolean"
+    },
+	{
+      "name": "/actions/sixense/in/right_b2",
+      "type": "boolean"
+    },
+	{
+      "name": "/actions/sixense/in/right_b3",
+      "type": "boolean"
+    },
+	{
+      "name": "/actions/sixense/in/right_b4",
+      "type": "boolean"
+    },
+	{
+      "name": "/actions/sixense/in/right_trigger",
+      "type": "single"
+    },
+	{
+      "name": "/actions/sixense/in/right_joystick",
+      "type": "vector2"
+    },
+	{
+      "name": "/actions/sixense/out/right_haptic",
+      "type": "vibration"
+    }
+  ],
+  "action_sets": [
+	{
+	  "name": "/actions/sixense",
+	  "usage": "leftright"
+	}
+  ]
+}

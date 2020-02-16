@@ -202,29 +202,29 @@ SIXENSE_EXPORT int sixenseInit(void)
 		GetModuleFileName(hm, path, sizeof(path));
 		WCHAR* p = wcsrchr(path, '\\');
 		if (p) *p = NULL;
-		wcscat_s(path, L"\\portal2_action_manifest.json");
+		wcscat_s(path, L"\\sixense_action_manifest.json");
 
-		vr::VRInput()->GetActionHandle("/actions/portal2/in/left_bumper", &buttons[0].bumper);
-		vr::VRInput()->GetActionHandle("/actions/portal2/in/left_start", &buttons[0].start);
-		vr::VRInput()->GetActionHandle("/actions/portal2/in/left_b1", &buttons[0].b1);
-		vr::VRInput()->GetActionHandle("/actions/portal2/in/left_b2", &buttons[0].b2);
-		vr::VRInput()->GetActionHandle("/actions/portal2/in/left_b3", &buttons[0].b3);
-		vr::VRInput()->GetActionHandle("/actions/portal2/in/left_b4", &buttons[0].b4);
-		vr::VRInput()->GetActionHandle("/actions/portal2/in/left_trigger", &buttons[0].trigger);
-		vr::VRInput()->GetActionHandle("/actions/portal2/in/left_joystick", &buttons[0].joystick);
-		vr::VRInput()->GetActionHandle("/actions/portal2/out/left_haptic", &buttons[0].haptic);
+		vr::VRInput()->GetActionHandle("/actions/sixense/in/left_bumper", &buttons[0].bumper);
+		vr::VRInput()->GetActionHandle("/actions/sixense/in/left_start", &buttons[0].start);
+		vr::VRInput()->GetActionHandle("/actions/sixense/in/left_b1", &buttons[0].b1);
+		vr::VRInput()->GetActionHandle("/actions/sixense/in/left_b2", &buttons[0].b2);
+		vr::VRInput()->GetActionHandle("/actions/sixense/in/left_b3", &buttons[0].b3);
+		vr::VRInput()->GetActionHandle("/actions/sixense/in/left_b4", &buttons[0].b4);
+		vr::VRInput()->GetActionHandle("/actions/sixense/in/left_trigger", &buttons[0].trigger);
+		vr::VRInput()->GetActionHandle("/actions/sixense/in/left_joystick", &buttons[0].joystick);
+		vr::VRInput()->GetActionHandle("/actions/sixense/out/left_haptic", &buttons[0].haptic);
 
-		vr::VRInput()->GetActionHandle("/actions/portal2/in/right_bumper", &buttons[1].bumper);
-		vr::VRInput()->GetActionHandle("/actions/portal2/in/right_start", &buttons[1].start);
-		vr::VRInput()->GetActionHandle("/actions/portal2/in/right_b1", &buttons[1].b1);
-		vr::VRInput()->GetActionHandle("/actions/portal2/in/right_b2", &buttons[1].b2);
-		vr::VRInput()->GetActionHandle("/actions/portal2/in/right_b3", &buttons[1].b3);
-		vr::VRInput()->GetActionHandle("/actions/portal2/in/right_b4", &buttons[1].b4);
-		vr::VRInput()->GetActionHandle("/actions/portal2/in/right_trigger", &buttons[1].trigger);
-		vr::VRInput()->GetActionHandle("/actions/portal2/in/right_joystick", &buttons[1].joystick);
-		vr::VRInput()->GetActionHandle("/actions/portal2/out/right_haptic", &buttons[1].haptic);
+		vr::VRInput()->GetActionHandle("/actions/sixense/in/right_bumper", &buttons[1].bumper);
+		vr::VRInput()->GetActionHandle("/actions/sixense/in/right_start", &buttons[1].start);
+		vr::VRInput()->GetActionHandle("/actions/sixense/in/right_b1", &buttons[1].b1);
+		vr::VRInput()->GetActionHandle("/actions/sixense/in/right_b2", &buttons[1].b2);
+		vr::VRInput()->GetActionHandle("/actions/sixense/in/right_b3", &buttons[1].b3);
+		vr::VRInput()->GetActionHandle("/actions/sixense/in/right_b4", &buttons[1].b4);
+		vr::VRInput()->GetActionHandle("/actions/sixense/in/right_trigger", &buttons[1].trigger);
+		vr::VRInput()->GetActionHandle("/actions/sixense/in/right_joystick", &buttons[1].joystick);
+		vr::VRInput()->GetActionHandle("/actions/sixense/out/right_haptic", &buttons[1].haptic);
 
-		vr::VRInput()->GetActionSetHandle("/actions/portal2", &actionSet);
+		vr::VRInput()->GetActionSetHandle("/actions/sixense", &actionSet);
 
 		g_running = true;
         g_thread = std::thread(sixenseThreadFunc);
